@@ -103,6 +103,8 @@ void* hostCycle() {
 
   if (VERBOSE) mlog("read in port, username");
 
+  Pthread_detach(pthread_self());
+
   listenfd = Open_listenfd(portNum);
 
   if (VERBOSE) mlog("starting server");
@@ -163,6 +165,8 @@ void* clientCycle() {
   mprint("Enter IP of Host (format ##.###.###.###): ");
   mprint("Enter Port of Host: ");
   mprint("Enter Username: ");
+
+  Pthread_detach(pthread_self());
 
   int clientfd = Open_clientfd(host.ip, host.port);
 
