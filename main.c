@@ -5,6 +5,8 @@
 #define USERNAMELEN 32
 #define CONTENTLEN 2048
 #define TIMELEN 32
+#define IPLEN 14
+#define PORTLEN 5
 
 struct messageT {
   char username[USERNAMELEN];
@@ -14,12 +16,12 @@ struct messageT {
 
 struct connT {
   char username[USERNAMELEN];
-  char ip[14];
-  char port[5];
+  char ip[IPLEN];
+  char port[PORTLEN];
 };
 
-void* clientCycle();
-void* hostCycle();
+void* clientCycle(void* datat);
+void* hostCycle(void* datat);
 void parseAdd(char* message);
 void changeUsername(char* buf);
 void setupConnection(char* buf, int connfd);
@@ -76,36 +78,40 @@ int main(int argc, char **argv)
 
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
     if (VERBOSE) mlog("starting as host");
+    /*data gathering*/
+    mprint("Enter Desired Port Number: \n");
+    fgets(self.port, PORTLEN, stdin); getchar();
+    mprint("Enter Username: \n");
+    fgets(self.username, USERNAMELEN, stdin); getchar();
+    /*end data gathering*/
     Pthread_create(&cycleThread, NULL, hostCycle, NULL);
   } else {
     if (VERBOSE) mlog ("starting as client");
+    /*data-gathering*/
+    mprint("Enter IP of Host (format ##.###.###.###): ");
+    fgets(host.ip, IPLEN, stdin); getchar();
+    mprint("Enter Port of Host: ");
+    fgets(host.port, PORTLEN, stdin); getchar();
+    mprint("Enter Username: ");
+    fgets(self.username, USERNAMELEN, stdin); getchar();
+    /*end data gathering*/
     Pthread_create(&cycleThread, NULL, clientCycle, NULL);
   }
 
   while(1) {
-    Sleep(1000);
+    Sleep(10);
     if (VERBOSE) mlog("this is still listening");
   }
 }
 
-void* hostCycle() {
+void* hostCycle(void* datat) {
+  Pthread_detach(pthread_self());
   int listenfd;
   socklen_t clientlen;
   pthread_t sconnThread;
   struct sockaddr_storage clientaddr;
 
-  mprint("Enter Desired Port Number: \n");
-  char portNum[5];
-  fgets(portNum, 5, stdin);
-  getchar();
-  mprint("Enter Username: \n");
-  fgets(self.username, 32, stdin);
-
-  if (VERBOSE) mlog("read in port, username");
-
-  Pthread_detach(pthread_self());
-
-  listenfd = Open_listenfd(portNum);
+  listenfd = Open_listenfd(self.port);
 
   if (VERBOSE) mlog("starting server");
   while (1) {
@@ -161,16 +167,9 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
   return strstr(buf, str);
 }
 
-void* clientCycle() {
-  mprint("Enter IP of Host (format ##.###.###.###): ");
-  mprint("Enter Port of Host: ");
-  mprint("Enter Username: ");
-
+void* clientCycle(void* datat) {
   Pthread_detach(pthread_self());
-
   int clientfd = Open_clientfd(host.ip, host.port);
-
-
   return NULL;
         // read response, thread: optional save
         // start another go if disconnect? sync request
