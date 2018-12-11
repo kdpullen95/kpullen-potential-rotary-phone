@@ -84,16 +84,16 @@ void hostCycle() {
   mprint("Enter Desired Port Number: \n");
   char portNum[5];
   fgets(portNum, 5, stdin);
-  mprint("Enter Username: ");
+  mprint("Enter Username: \n");
   fgets(self.username, 32, stdin);
 
-  //it turns out I am the dumb
-  if (VERBOSE) mlog("|||||| read in port, username");
+  //no it might be C
+  if (VERBOSE) mlog("|||||| read in port, username\n");
 
   Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
   listenfd = Open_listenfd(portNum);
 
-  if (VERBOSE) mlog("|||||| starting server");
+  if (VERBOSE) mlog("|||||| starting server\n");
   while (1) {
     clientlen = sizeof(clientaddr);
     int *connfd = Malloc(sizeof(*connfd));
