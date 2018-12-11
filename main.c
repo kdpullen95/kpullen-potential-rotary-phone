@@ -132,7 +132,8 @@ void* hostCycle() {
     connect.EXISTS = 1;
     P(&connMutex);
     if (lastConn == MAXCONN - 1) { lastConn = 0; } else { lastConn++; }
-    int i = lastConn;
+    int *i = Malloc(sizeof(*i));
+    i = lastConn;
     connections[lastConn] = connect;
     V(&connMutex);
     Pthread_create(&sconnThread, NULL, handleSconn, i);
