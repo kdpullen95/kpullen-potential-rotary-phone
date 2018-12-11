@@ -18,8 +18,8 @@ struct connT {
   char port[5];
 };
 
-void clientCycle();
-void hostCycle();
+void* clientCycle();
+void* hostCycle();
 void parseAdd(char* message);
 void changeUsername(char* buf);
 void setupConnection(char* buf, int connfd);
@@ -115,6 +115,7 @@ void* hostCycle() {
       /*accept incoming connections*/
   }
 
+  return NULL;
 }
 
 void* handleSconn(void* tempc) {
@@ -166,9 +167,9 @@ void* clientCycle() {
   int clientfd = Open_clientfd(host.ip, host.port);
 
 
+  return NULL;
         // read response, thread: optional save
         // start another go if disconnect? sync request
-
 }
 
 void* listenKeyboard() {
