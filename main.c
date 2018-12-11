@@ -2,13 +2,18 @@
 #include <string.h>
 #include "csapp.h"
 
+#define USERNAMELEN = 32;
+#define CONTENTLEN = 32;
+#define TIMELEN = 32;
+
 struct messageT {
-  char username[32];
-  char content[2048];
+  char username[USERNAMELEN];
+  char content[CONTENTLEN];
+  char time[TIMELEN];
 };
 
 struct connT {
-  char username[32];
+  char username[USERNAMELEN];
   char ip[14];
   char port[5];
 };
@@ -19,7 +24,7 @@ void* listenKeyboard();
 void handleSync();
 void connectionTimer();
 void mlog(char str);
-void* createSconnThread(void* tempc);
+void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 int syncRequest();
 int loadHistory(char* fileName);
@@ -29,11 +34,11 @@ char* grabUsername(struct connT user);
 int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
 //I know all caps for variables defies
                   // convention, but it makes my code easier to visually parse
-Sem_t fileMutex;
-Sem_t arrayMutex;
-struct message[40] recentMessages;
+sem_t fileMutex;
+sem_t arrayMutex;
+struct message recentMessages[40];
 int newestMessage = 0;
-struct connT[] connections;
+struct connT connections[];
 struct connT host;
 struct connT self;
 pthread_t keyThread;
@@ -124,21 +129,22 @@ void* listenKeyboard() {
   //pass on to host or client pass
 }
 
-void addToMessages(char username, char content) {
+void addToMessages(char username, char content, char time) {
   struct messageT *message = malloc(sizeof *message);
-  strncpy(message.username, username, NUMMMM);
-  strncpy(message.content, content, NUMMMMMMM);
+  strncpy(message->username, username, USERNAMELEN);
+  strncpy(message->content, content, CONTENTLEN);
+  strncpy(message->time, time, TIMELEN);
   P(&arrayMutex);
   newestMessage++;
   if (recentMessages[newestMessage] != NULL) {
     Free(recentMessages[newestMessage]);
   }
-  recentMessages[newestMessage] = message;
+  recentMessages[newestMessage] = &message;
   printRecentMessages();
   V(&arrayMutex);
   if (SAVE) {
     pthread_t saveThread;
-    Pthread_create(&saveThread, NULL, saveToChatlog, &message)
+    Pthread_create(&saveThread, NULL, saveToChatlog, &message);
   }
 }
 
