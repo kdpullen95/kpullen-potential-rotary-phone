@@ -107,7 +107,7 @@ int main(int argc, char **argv)
   while(1) {
     fgets(buf, CONTENTLEN, stdin);
     if (VERBOSE) { mlog("sending on message"); mlog(buf); }
-    char *m[MAXLINE];
+    char m[MAXLINE];
     sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
     sendMessage(m);
     addToMessages(m);
@@ -154,7 +154,7 @@ void* handleSconn(void* tempc) {
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
     if (startsWith(buf, "MSG{")) {
-      char *t[MAXLINE];
+      char t[MAXLINE];
       sprintf(t, "%s", buf + 4);
       sendMessage(t);
       addToMessages(t);
