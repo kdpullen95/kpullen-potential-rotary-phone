@@ -24,6 +24,8 @@ void* listenKeyboard();
 void handleSync();
 void connectionTimer();
 void mlog(char* str);
+void mprint(char* str);
+void printRecentMessages();
 void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 int syncRequest();
@@ -59,10 +61,8 @@ int main(int argc, char **argv)
       SAVE = 1;
     } else
     if (strcmp(argv[i], "-l") == 0) {
-      if (loadHistory(argv[i+1])) {
-        LOAD = 1;
-        i++;
-      }
+      LOAD = 1;
+      i++;
     }
   }
 
@@ -172,6 +172,14 @@ char* grabUsername(struct connT user) {
 
 }
 
+void printRecentMessages() {
+  
+}
+
 void mlog(char* str) {
+  printf("%s", str);
+}
+
+void mprint(char* str) {
   printf("%s", str);
 }
