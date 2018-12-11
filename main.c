@@ -3,7 +3,7 @@
 #include "csapp.h"
 
 #define USERNAMELEN 32
-#define CONTENTLEN 32
+#define CONTENTLEN 2048
 #define TIMELEN 32
 
 struct messageT {
@@ -22,10 +22,8 @@ void clientCycle();
 void hostCycle();
 void parseAdd(char* message);
 void changeUsername(char* buf);
-void setupConnection(char* buf);
+void setupConnection(char* buf, int connfd);
 void* listenKeyboard();
-void handleSync();
-void connectionTimer();
 void mlog(char* str);
 void mprint(char* str);
 void printRecentMessages();
@@ -34,7 +32,6 @@ void* saveToChatlog(void* message);
 int syncRequest();
 int loadHistory(char* fileName);
 int startsWith(char *buf, char *str);
-char* grabUsername(struct connT user);
 
 
 int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
@@ -57,29 +54,41 @@ int main(int argc, char **argv)
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       HEADLESS = 1;
+      mlog("headless");
     } else
     if (strcmp(argv[i], "-v") == 0) {
       VERBOSE = 1;
+      mlog("verbose");
     } else
     if (strcmp(argv[i], "-s") == 0) {
       SAVE = 1;
+      mlog("saving chatlogs");
     } else
     if (strcmp(argv[i], "-l") == 0) {
       LOAD = 1;
       i++;
+      mlog("will attempt to load chatlogs from file");
+      mlog(argv[i+1]);
     }
   }
 
+  pthread_t cycleThread;
+
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
     if (VERBOSE) mlog("starting as host");
-    hostCycle();
+    Pthread_create(&cycleThread, NULL, hostCycle, NULL);
   } else {
     if (VERBOSE) mlog ("starting as client");
-    clientCycle();
+    Pthread_create(&cycleThread, NULL, clientCycle, NULL);
+  }
+
+  while(1) {
+    Sleep(1000);
+    if (VERBOSE) mlog("this is still listening");
   }
 }
 
-void hostCycle() {
+void* hostCycle() {
   int listenfd;
   socklen_t clientlen;
   pthread_t sconnThread;
@@ -92,10 +101,8 @@ void hostCycle() {
   mprint("Enter Username: \n");
   fgets(self.username, 32, stdin);
 
-  //no it might be C
   if (VERBOSE) mlog("read in port, username");
 
-  Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
   listenfd = Open_listenfd(portNum);
 
   if (VERBOSE) mlog("starting server");
@@ -122,21 +129,19 @@ void* handleSconn(void* tempc) {
   Rio_readinitb(&rio, connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
-    if (!strcmp("\r\n", buf)) { break; }
     if (startsWith(buf, "INTCON{")) {
-      setupConnection(buf);
+      setupConnection(buf, connfd);
     } else
     if (startsWith(buf, "MSG{")) {
       parseAdd(buf);
     } else
-    if (startsWith(buf, "CHNUSERN{")) {
+    if (startsWith(buf, "CHUSERN{")) {
       changeUsername(buf);
+    } else
+    if (startsWith(buf, "ENDSESS{")) {
+      break;
     }
   }
-  ///handle scones
-  //parse, addtomessages
-
-  //pass on to others in list of other name
   if (VERBOSE) mlog("<<< exiting thread: sconn");
   return NULL; //auto reap
 }
@@ -145,7 +150,7 @@ void changeUsername(char* buf) {
 
 }
 
-void setupConnection(char* buf) {
+void setupConnection(char* buf, int connfd) {
 
 }
 
@@ -153,10 +158,13 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
   return strstr(buf, str);
 }
 
-void clientCycle() {
+void* clientCycle() {
   mprint("Enter IP of Host (format ##.###.###.###): ");
   mprint("Enter Port of Host: ");
   mprint("Enter Username: ");
+
+  int clientfd = Open_clientfd(host.ip, host.port);
+
 
         // read response, thread: optional save
         // start another go if disconnect? sync request
@@ -170,7 +178,7 @@ void* listenKeyboard() {
 }
 
 void parseAdd(char* message) {
-
+ //pass on to others in list of other name
 }
 
 void addToMessages(char username, char content, char time) {
@@ -198,18 +206,6 @@ void* saveToChatlog(void *message) {
   V(&fileMutex);
   if (VERBOSE) mlog("<<< exiting thread: save");
   return NULL; //auto reap
-}
-
-void handleSync() {
-
-}
-
-void connectionTimer() {
-
-}
-
-char* grabUsername(struct connT user) {
-  return "";
 }
 
 void printRecentMessages() {
