@@ -17,6 +17,7 @@ struct connT {
   char port[PORTLEN];
   int connfd;
   sem_t mutex;
+  int EXISTS;
 };
 
 void* clientCycle();
@@ -105,7 +106,7 @@ int main(int argc, char **argv)
   while(1) {
     fgets(buf, CONTENTLEN, stdin);
     if (VERBOSE) { mlog("sending on message"); mlog(buf); }
-    char m = sprintf("MSG{[%s] %s: %s", (int)time(NULL), self.username, buf)
+    char* m = sprintf("MSG{[%i] %s: %s", (int)time(NULL), self.username, buf);
     sendMessage(m);
     addToMessages(m);
   }
@@ -126,11 +127,13 @@ void* hostCycle() {
     if (VERBOSE) mlog("connection attempted");
     struct connT connect;
     connect.connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+    connect.EXISTS = 1;
     P(&connMutex);
     if (lastConn == MAXCONN - 1) { lastConn = 0; } else { lastConn++; }
-    connection[lastConn] = connect;
+    int i = lastConn;
+    connections[lastConn] = connect;
     V(&connMutex);
-    Pthread_create(&sconnThread, NULL, handleSconn, lastConn);
+    Pthread_create(&sconnThread, NULL, handleSconn, i);
       /*accept incoming connections*/
   }
 
@@ -149,7 +152,8 @@ void* handleSconn(void* tempc) {
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
     if (startsWith(buf, "MSG{")) {
-      char* t = sprintf("%s", buf + 4);
+      char* t[MAXLINE];
+      sprintf(t, "%s", buf + 4);
       sendMessage(t);
       addToMessages(t);
     } else
@@ -161,7 +165,7 @@ void* handleSconn(void* tempc) {
     }
   }
   P(&connMutex);
-  connections[i] = NULL;
+  connections[i].EXISTS = 0;
   V(&connMutex);
 
   if (VERBOSE) mlog("<<< exiting thread: sconn");
@@ -174,7 +178,8 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
 
 void* clientCycle() {
   Pthread_detach(pthread_self());
-  Rio_readinitb(&rio, clientfd);
+  rio_t rio; char buf[MAXLINE];
+  Rio_readinitb(&rio, host.connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
     addToMessages(buf);
@@ -184,7 +189,7 @@ void* clientCycle() {
 
 void sendMessage(char* buf) {
   for (int i = 0; i < 100; i++) {
-    if (connections[i]) {
+    if (connections[i].EXISTS == 1) {
       Rio_writen(connections[i].connfd, buf, strlen(buf));
     }
   }
