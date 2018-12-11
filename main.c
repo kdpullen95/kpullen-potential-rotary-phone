@@ -116,6 +116,7 @@ int main(int argc, char **argv)
 
 void* hostCycle() {
   Pthread_detach(pthread_self());
+  if (VERBOSE) mlog("<<< entering host thread");
   int listenfd;
   socklen_t clientlen;
   pthread_t sconnThread;
@@ -181,6 +182,7 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
 
 void* clientCycle() {
   Pthread_detach(pthread_self());
+  if (VERBOSE) mlog("<<< entering client thread");
   rio_t rio; char buf[MAXLINE];
   Rio_readinitb(&rio, host.connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
