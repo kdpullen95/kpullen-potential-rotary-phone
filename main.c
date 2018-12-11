@@ -20,6 +20,9 @@ struct connT {
 
 void clientCycle();
 void hostCycle();
+void parseAdd(char message);
+void changeUsername(char buf);
+void setupConnection(char buf);
 void* listenKeyboard();
 void handleSync();
 void connectionTimer();
@@ -38,9 +41,9 @@ int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
                   // convention, but it makes my code easier to visually parse
 sem_t fileMutex;
 sem_t arrayMutex;
-struct messageT recentMessages[40];
+struct messageT recentMessages[40]; //TODO: replace with linked list if time
 int newestMessage = 0;
-struct connT connections[100];
+struct connT connections[100]; //TODO: linked list if time
 struct connT host;
 struct connT self;
 pthread_t keyThread;
@@ -67,10 +70,10 @@ int main(int argc, char **argv)
   }
 
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
-    if (VERBOSE) mlog("|||||| starting as host\n");
+    if (VERBOSE) mlog("starting as host");
     hostCycle();
   } else {
-    if (VERBOSE) mlog ("|||||| starting as client\n");
+    if (VERBOSE) mlog ("starting as client");
     clientCycle();
   }
 }
@@ -84,21 +87,22 @@ void hostCycle() {
   mprint("Enter Desired Port Number: \n");
   char portNum[5];
   fgets(portNum, 5, stdin);
+  getchar();
   mprint("Enter Username: \n");
   fgets(self.username, 32, stdin);
 
   //no it might be C
-  if (VERBOSE) mlog("|||||| read in port, username\n");
+  if (VERBOSE) mlog("read in port, username");
 
   Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
   listenfd = Open_listenfd(portNum);
 
-  if (VERBOSE) mlog("|||||| starting server\n");
+  if (VERBOSE) mlog("starting server");
   while (1) {
     clientlen = sizeof(clientaddr);
     int *connfd = Malloc(sizeof(*connfd));
     *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
-    if (VERBOSE) mlog("|||||| connection attempted\n");
+    if (VERBOSE) mlog("connection attempted");
     Pthread_create(&sconnThread, NULL, handleSconn, connfd);
       /*accept incoming connections*/
   }
@@ -107,15 +111,44 @@ void hostCycle() {
 
 void* handleSconn(void* tempc) {
   int connfd = *((int *) tempc);
-  if (VERBOSE) mlog(">>>>>> creating thread: sconn\n");
+  char buf[MAXLINE];
+  if (VERBOSE) mlog(">>> creating thread: sconn");
   Pthread_detach(pthread_self());
   Free(tempc);
+  struct connT connection;
+  rio_t rio;
+
+  Rio_readinitb(&rio, connfd);
+  while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
+    if (VERBOSE) mlog(buf);
+    if (startsWith(buf, "INTCON{")) {
+      setupConnection(buf);
+    } else
+    if (startsWith(buf, "MSG{")) {
+      parseAdd(buf);
+    } else
+    if (startsWith(buf, "CHNUSERN{")) {
+      changeUsername(buf);
+    }
+  }
   ///handle scones
   //parse, addtomessages
 
   //pass on to others in list of other name
-  if (VERBOSE) mlog("<<<<<< exiting thread: sconn\n");
+  if (VERBOSE) mlog("<<< exiting thread: sconn");
   return NULL; //auto reap
+}
+
+void changeUsername(char buf) {
+
+}
+
+void setupConnection(char buf) {
+
+}
+
+int startsWith(char buf, char str) { //TODO: actual starts with
+  return strstr(buf, str);
 }
 
 void clientCycle() {
@@ -132,6 +165,10 @@ void* listenKeyboard() {
   //parse, add parsed string to messages, thread: optional save
   //pass on to host or client pass
   return NULL;
+}
+
+void parseAdd(char message) {
+
 }
 
 void addToMessages(char username, char content, char time) {
@@ -152,12 +189,12 @@ void addToMessages(char username, char content, char time) {
 }
 
 void* saveToChatlog(void *message) {
-  if (VERBOSE) mlog(">>>>>> creating thread: save");
+  if (VERBOSE) mlog(">>> creating thread: save");
   Pthread_detach(pthread_self());
   P(&fileMutex);
   //save
   V(&fileMutex);
-  if (VERBOSE) mlog("<<<<<< exiting thread: save");
+  if (VERBOSE) mlog("<<< exiting thread: save");
   return NULL; //auto reap
 }
 
@@ -178,7 +215,7 @@ void printRecentMessages() {
 }
 
 void mlog(char* str) {
-  printf("%s", str);
+  printf("|||||||||||||||||| %s\n", str);
 }
 
 void mprint(char* str) {
