@@ -2,9 +2,9 @@
 #include <string.h>
 #include "csapp.h"
 
-#define USERNAMELEN = 32;
-#define CONTENTLEN = 32;
-#define TIMELEN = 32;
+#define USERNAMELEN 32;
+#define CONTENTLEN 32;
+#define TIMELEN 32;
 
 struct messageT {
   char username[USERNAMELEN];
