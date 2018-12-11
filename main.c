@@ -97,6 +97,7 @@ int main(int argc, char **argv)
     fgets(self.username, USERNAMELEN, stdin); getchar();
     /*end data gathering*/
     host.connfd = Open_clientfd(host.ip, host.port);
+    host.EXISTS = 1;
     Sem_init(&host.mutex, 0, 1);
     connections[0] = host;
     Pthread_create(&cycleThread, NULL, clientCycle, NULL);
