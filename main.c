@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "csapp.h"
 
 #define USERNAMELEN 32
@@ -7,31 +8,27 @@
 #define TIMELEN 32
 #define IPLEN 14
 #define PORTLEN 5
-
-struct messageT {
-  char username[USERNAMELEN];
-  char content[CONTENTLEN];
-  char time[TIMELEN];
-};
+#define MAXCONN 15
+#define MAXHISTORY 40
 
 struct connT {
   char username[USERNAMELEN];
   char ip[IPLEN];
   char port[PORTLEN];
+  int connfd;
+  sem_t mutex;
 };
 
-void* clientCycle(void* datat);
-void* hostCycle(void* datat);
-void parseAdd(char* message);
-void changeUsername(char* buf);
+void* clientCycle();
+void* hostCycle();
 void setupConnection(char* buf, int connfd);
-void* listenKeyboard();
 void mlog(char* str);
 void mprint(char* str);
 void printRecentMessages();
 void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
-int syncRequest();
+void sendMessage(char* buf);
+void addToMessages(char* buf);
 int loadHistory(char* fileName);
 int startsWith(char *buf, char *str);
 
@@ -41,9 +38,11 @@ int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
                   // convention, but it makes my code easier to visually parse
 sem_t fileMutex;
 sem_t arrayMutex;
-struct messageT recentMessages[40]; //TODO: replace with linked list if time
+sem_t connMutex;
+char recentMessages[MAXHISTORY][MAXLINE]; //TODO: replace with linked list
 int newestMessage = 0;
-struct connT connections[100]; //TODO: linked list if time
+struct connT connections[MAXCONN]; //TODO: linked list
+int lastConn = 0;
 struct connT host;
 struct connT self;
 pthread_t keyThread;
@@ -52,6 +51,7 @@ int main(int argc, char **argv)
 {
   Sem_init(&fileMutex, 0, 1);
   Sem_init(&arrayMutex, 0, 1);
+  Sem_init(&connMutex, 0, 1);
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
@@ -95,16 +95,23 @@ int main(int argc, char **argv)
     mprint("Enter Username: ");
     fgets(self.username, USERNAMELEN, stdin); getchar();
     /*end data gathering*/
+    host.connfd = Open_clientfd(host.ip, host.port);
+    Sem_init(&host.mutex, 0, 1);
+    connections[0] = host;
     Pthread_create(&cycleThread, NULL, clientCycle, NULL);
   }
 
+  char buf[CONTENTLEN];
   while(1) {
-    Sleep(10);
-    if (VERBOSE) mlog("this is still listening");
+    fgets(buf, CONTENTLEN, stdin);
+    if (VERBOSE) { mlog("sending on message"); mlog(buf); }
+    char m = sprintf("MSG{[%s] %s: %s", (int)time(NULL), self.username, buf)
+    sendMessage(m);
+    addToMessages(m);
   }
 }
 
-void* hostCycle(void* datat) {
+void* hostCycle() {
   Pthread_detach(pthread_self());
   int listenfd;
   socklen_t clientlen;
@@ -112,14 +119,18 @@ void* hostCycle(void* datat) {
   struct sockaddr_storage clientaddr;
 
   listenfd = Open_listenfd(self.port);
-
   if (VERBOSE) mlog("starting server");
+
   while (1) {
     clientlen = sizeof(clientaddr);
-    int *connfd = Malloc(sizeof(*connfd));
-    *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
     if (VERBOSE) mlog("connection attempted");
-    Pthread_create(&sconnThread, NULL, handleSconn, connfd);
+    struct connT connect;
+    connect.connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+    P(&connMutex);
+    if (lastConn == MAXCONN - 1) { lastConn = 0; } else { lastConn++; }
+    connection[lastConn] = connect;
+    V(&connMutex);
+    Pthread_create(&sconnThread, NULL, handleSconn, lastConn);
       /*accept incoming connections*/
   }
 
@@ -127,82 +138,71 @@ void* hostCycle(void* datat) {
 }
 
 void* handleSconn(void* tempc) {
-  int connfd = *((int *) tempc);
-  char buf[MAXLINE];
   if (VERBOSE) mlog(">>> creating thread: sconn");
   Pthread_detach(pthread_self());
+  int i = *((int *) tempc);
+  char buf[MAXLINE];
   Free(tempc);
-  struct connT connection;
   rio_t rio;
 
-  Rio_readinitb(&rio, connfd);
+  Rio_readinitb(&rio, connections[i].connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
-    if (startsWith(buf, "INTCON{")) {
-      setupConnection(buf, connfd);
-    } else
     if (startsWith(buf, "MSG{")) {
-      parseAdd(buf);
+      char* t = sprintf("%s", buf + 4);
+      sendMessage(t);
+      addToMessages(t);
     } else
-    if (startsWith(buf, "CHUSERN{")) {
-      changeUsername(buf);
+    if (startsWith(buf, "SYNCREQ{")) {
+
     } else
     if (startsWith(buf, "ENDSESS{")) {
       break;
     }
   }
+  P(&connMutex);
+  connections[i] = NULL;
+  V(&connMutex);
+
   if (VERBOSE) mlog("<<< exiting thread: sconn");
   return NULL; //auto reap
-}
-
-void changeUsername(char* buf) {
-
-}
-
-void setupConnection(char* buf, int connfd) {
-
 }
 
 int startsWith(char *buf, char *str) { //TODO: actual starts with
   return strstr(buf, str);
 }
 
-void* clientCycle(void* datat) {
+void* clientCycle() {
   Pthread_detach(pthread_self());
-  int clientfd = Open_clientfd(host.ip, host.port);
-  return NULL;
-        // read response, thread: optional save
-        // start another go if disconnect? sync request
-}
-
-void* listenKeyboard() {
-  //parse, add parsed string to messages, thread: optional save
-  //pass on to host or client pass
+  Rio_readinitb(&rio, clientfd);
+  while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
+    if (VERBOSE) mlog(buf);
+    addToMessages(buf);
+  }
   return NULL;
 }
 
-void parseAdd(char* message) {
- //pass on to others in list of other name
+void sendMessage(char* buf) {
+  for (int i = 0; i < 100; i++) {
+    if (connections[i]) {
+      Rio_writen(connections[i].connfd, buf, strlen(buf));
+    }
+  }
 }
 
-void addToMessages(char username, char content, char time) {
-  struct messageT *message = malloc(sizeof *message);
-  strncpy(message->username, &username, USERNAMELEN);
-  strncpy(message->content, &content, CONTENTLEN);
-  strncpy(message->time, &time, TIMELEN);
+void addToMessages(char* buf) {
   P(&arrayMutex);
   newestMessage++;
-  //free...?
-  recentMessages[newestMessage] = *message;
+  strcpy(recentMessages[newestMessage], buf);
   printRecentMessages();
   V(&arrayMutex);
   if (SAVE) {
     pthread_t saveThread;
-    Pthread_create(&saveThread, NULL, saveToChatlog, &message);
+    Pthread_create(&saveThread, NULL, saveToChatlog, &buf);
   }
 }
 
-void* saveToChatlog(void *message) {
+void* saveToChatlog(void *buf) {
   if (VERBOSE) mlog(">>> creating thread: save");
   Pthread_detach(pthread_self());
   P(&fileMutex);
@@ -213,7 +213,12 @@ void* saveToChatlog(void *message) {
 }
 
 void printRecentMessages() {
-
+  for (int i = newestMessage - 1; i > -1; i--) {
+    mprint(recentMessages[i]);
+  }
+  for (int i = MAXHISTORY - 1; i > newestMessage - 1; i--) {
+    mprint(recentMessages[i]);
+  }
 }
 
 void mlog(char* str) {
