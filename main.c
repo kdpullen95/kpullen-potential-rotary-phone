@@ -33,7 +33,7 @@ void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 int syncRequest();
 int loadHistory(char* fileName);
-int startsWith(char buf, char str);
+int startsWith(char *buf, char *str);
 char* grabUsername(struct connT user);
 
 
@@ -148,7 +148,7 @@ void setupConnection(char buf) {
 
 }
 
-int startsWith(char buf, char str) { //TODO: actual starts with
+int startsWith(char *buf, char *str) { //TODO: actual starts with
   return strstr(buf, str);
 }
 
