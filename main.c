@@ -82,11 +82,12 @@ void hostCycle() {
   struct sockaddr_storage clientaddr;
 
   mprint("Enter Desired Port Number: \n");
-  char portNum[5];
-  fgets(portNum, 5, stdin); //not breaking on enter??
+  //char portNum[5];
+  //fgets(portNum, 5, stdin); //not breaking on enter??
   mprint("Enter Username: ");
   //fgets(self.username, 32, stdin); //WHY IS IT NOT BREAKING ON ENTER??
 
+  char portNum[] = "8080";
   Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
   listenfd = Open_listenfd(portNum);
 
