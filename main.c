@@ -33,6 +33,7 @@ void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 int syncRequest();
 int loadHistory(char* fileName);
+int startsWith(char buf, char str);
 char* grabUsername(struct connT user);
 
 
