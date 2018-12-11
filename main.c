@@ -83,9 +83,11 @@ void hostCycle() {
 
   mprint("Enter Desired Port Number: ");
   char portNum[5];
-  fgets(portNum, 5, stdin);
+  //fgets(portNum, 5, stdin); not breaking on enter??
+  read(STDIN_FILENO, portNum, sizeof(portNum));
   mprint("Enter Username: ");
-  fgets(self.username, 32, stdin);
+  //fgets(self.username, 32, stdin);
+  read(STDIN_FILENO, self.username, sizeof(self.username));
 
   Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
   listenfd = Open_listenfd(portNum);
