@@ -1,15 +1,17 @@
 CC = gcc
+CFLAGS = -g -Wall
+LDFLAGS = -lpthread
 
 all: main
 
 csapp.o: csapp.c csapp.h
-	$(CC) -c csapp.c
+	$(CC) $(CFLAGS) -c csapp.c
 
-proxy.o: main.c csapp.h
-	$(CC) -c main.c
+main.o: main.c csapp.h
+	$(CC) $(CFLAGS) -c main.c
 
 main: main.o csapp.o
-	$(CC) main.o csapp.o -o main
+	$(CC) $(CFLAGS) main.o csapp.o -o main $(LDFLAGS)
 
 clean:
-	rm -f *.o proxy
+	rm -f *~ *.o main
