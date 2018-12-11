@@ -122,6 +122,7 @@ void* handleSconn(void* tempc) {
   Rio_readinitb(&rio, connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
+    if (!strcmp("\r\n", buf)) { break; }
     if (startsWith(buf, "INTCON{")) {
       setupConnection(buf);
     } else
