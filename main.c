@@ -20,9 +20,9 @@ struct connT {
 
 void clientCycle();
 void hostCycle();
-void parseAdd(char message);
-void changeUsername(char buf);
-void setupConnection(char buf);
+void parseAdd(char* message);
+void changeUsername(char* buf);
+void setupConnection(char* buf);
 void* listenKeyboard();
 void handleSync();
 void connectionTimer();
@@ -140,11 +140,11 @@ void* handleSconn(void* tempc) {
   return NULL; //auto reap
 }
 
-void changeUsername(char buf) {
+void changeUsername(char* buf) {
 
 }
 
-void setupConnection(char buf) {
+void setupConnection(char* buf) {
 
 }
 
@@ -168,7 +168,7 @@ void* listenKeyboard() {
   return NULL;
 }
 
-void parseAdd(char message) {
+void parseAdd(char* message) {
 
 }
 
