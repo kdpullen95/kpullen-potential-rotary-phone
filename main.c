@@ -126,9 +126,9 @@ void* hostCycle() {
 
   while (1) {
     clientlen = sizeof(clientaddr);
-    if (VERBOSE) mlog("connection attempted");
     struct connT connect;
     connect.connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+    if (VERBOSE) mlog("connection attempted");
     connect.EXISTS = 1;
     P(&connMutex);
     if (lastConn == MAXCONN - 1) { lastConn = 0; } else { lastConn++; }
@@ -220,10 +220,10 @@ void* saveToChatlog(void *buf) {
 }
 
 void printRecentMessages() {
-  for (int i = newestMessage - 1; i > -1; i--) {
+  for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     mprint(recentMessages[i]);
   }
-  for (int i = MAXHISTORY - 1; i > newestMessage - 1; i--) {
+  for (int i = 0; i < newestMessage + 1; i++) {
     mprint(recentMessages[i]);
   }
 }
