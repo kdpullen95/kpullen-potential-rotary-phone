@@ -23,7 +23,7 @@ void hostCycle();
 void* listenKeyboard();
 void handleSync();
 void connectionTimer();
-void mlog(char str);
+void mlog(char* str);
 void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 int syncRequest();
@@ -172,4 +172,8 @@ void connectionTimer() {
 
 char* grabUsername(struct connT user) {
 
+}
+
+void mlog(char* str) {
+  printf("%s", str);
 }
