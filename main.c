@@ -38,7 +38,7 @@ sem_t fileMutex;
 sem_t arrayMutex;
 struct messageT recentMessages[40];
 int newestMessage = 0;
-struct connT connections[];
+struct connT connections[100];
 struct connT host;
 struct connT self;
 pthread_t keyThread;
@@ -131,15 +131,13 @@ void* listenKeyboard() {
 
 void addToMessages(char username, char content, char time) {
   struct messageT *message = malloc(sizeof *message);
-  strncpy(message->username, username, USERNAMELEN);
-  strncpy(message->content, content, CONTENTLEN);
-  strncpy(message->time, time, TIMELEN);
+  strncpy(message->username, &username, USERNAMELEN);
+  strncpy(message->content, &content, CONTENTLEN);
+  strncpy(message->time, &time, TIMELEN);
   P(&arrayMutex);
   newestMessage++;
-  if (recentMessages[newestMessage] != NULL) {
-    Free(recentMessages[newestMessage]);
-  }
-  recentMessages[newestMessage] = &message;
+  //free...?
+  recentMessages[newestMessage] = *message;
   printRecentMessages();
   V(&arrayMutex);
   if (SAVE) {
