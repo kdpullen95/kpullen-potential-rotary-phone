@@ -107,7 +107,8 @@ int main(int argc, char **argv)
   while(1) {
     fgets(buf, CONTENTLEN, stdin);
     if (VERBOSE) { mlog("sending on message"); mlog(buf); }
-    char* m = sprintf("MSG{[%i] %s: %s", (int)time(NULL), self.username, buf);
+    char* m[MAXLINE];
+    sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
     sendMessage(m);
     addToMessages(m);
   }
