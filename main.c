@@ -127,6 +127,7 @@ void clientCycle() {
 void* listenKeyboard() {
   //parse, add parsed string to messages, thread: optional save
   //pass on to host or client pass
+  return NULL;
 }
 
 void addToMessages(char username, char content, char time) {
@@ -156,10 +157,6 @@ void* saveToChatlog(void *message) {
   return NULL; //auto reap
 }
 
-int syncRequest() {
-
-}
-
 void handleSync() {
 
 }
@@ -169,11 +166,11 @@ void connectionTimer() {
 }
 
 char* grabUsername(struct connT user) {
-
+  return "";
 }
 
 void printRecentMessages() {
-  
+
 }
 
 void mlog(char* str) {
