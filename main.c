@@ -81,11 +81,12 @@ void hostCycle() {
   pthread_t sconnThread;
   struct sockaddr_storage clientaddr;
 
-  mprint("Enter Desired Port Number: \n");
+  //mprint("Enter Desired Port Number: \n");
   //char portNum[5];
   //fgets(portNum, 5, stdin); //not breaking on enter??
-  mprint("Enter Username: ");
+  //mprint("Enter Username: ");
   //fgets(self.username, 32, stdin); //WHY IS IT NOT BREAKING ON ENTER??
+  //probably a seg fault or something stupid, and c is too dumb to tell me about it
 
   char portNum[] = "8080";
   Pthread_create(&keyThread, NULL, listenKeyboard, NULL);
