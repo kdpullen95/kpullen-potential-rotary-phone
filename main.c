@@ -36,7 +36,7 @@ int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
                   // convention, but it makes my code easier to visually parse
 sem_t fileMutex;
 sem_t arrayMutex;
-struct message recentMessages[40];
+struct messageT recentMessages[40];
 int newestMessage = 0;
 struct connT connections[];
 struct connT host;
