@@ -36,7 +36,7 @@ void slog(char* str);
 void hostCycle();
 void* ping();
 int loadHistory(char* fileName);
-void sendMessageOn(char* buf);
+void sendMessageOn(char* buf, int connfd);
 void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 
@@ -207,9 +207,9 @@ void slog(char* str) {
   printf("|||||||||||||||||| S: %s\n", str);
 }
 
-void sendMessageOn(char* buf) {
+void sendMessageOn(char* buf, int connfd) {
   for (int i = 0; i < 100; i++) {
-    if (connections[i].EXISTS == 1) {
+    if (connections[i].EXISTS == 1 && connections[i].connfd != connfd) {
       Rio_writen(connections[i].connfd, buf, strlen(buf));
     }
   }
@@ -267,7 +267,7 @@ void* handleSconn(void* tempc) {
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) slog(buf);
     if (startsWith(buf, "MSG{")) {
-      sendMessageOn(buf);
+      sendMessageOn(buf, connections[i].connfd);
       addToMessages(buf);
     } else
     if (startsWith(buf, "SYNCREQ{")) {
