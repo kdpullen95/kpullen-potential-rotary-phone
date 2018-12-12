@@ -50,7 +50,7 @@ struct connT host;
 struct connT self;
 pthread_t keyThread;
 char chatlogName[CONTENTLEN];
-char pingString = "PING";
+char *pingString = "PING";
 
 int main(int argc, char **argv)
 {
@@ -125,13 +125,15 @@ int main(int argc, char **argv)
 }
 
 void* ping() {
-  Sleep(5);
-  for (int i = 0; i < MAXCONN; i++) {
-    if (connections[i].EXISTS == 1) {
-      Rio_writen(connections[i].connfd, pingString, strlen(pingString));
+  while(1) {
+    Sleep(10);
+    for (int i = 0; i < MAXCONN; i++) {
+      if (connections[i].EXISTS == 1) {
+        Rio_writen(connections[i].connfd, pingString, strlen(pingString));
+      }
     }
   }
-
+  return NULL;
 }
 
 void* hostCycle() {
@@ -229,22 +231,14 @@ void addToMessages(char* buf) {
   printRecentMessages();
   V(&arrayMutex);
   if (SAVE) {
-    pthread_t saveThread;
-    Pthread_create(&saveThread, NULL, saveToChatlog, &buf);
+    if (VERBOSE) mlog("saving to chatlog");
+    P(&fileMutex);
+    FILE * fp;
+    fp = fopen(chatlogName, "ab+");
+    fprintf(fp, "%s", buf);
+    fclose(fp);
+    V(&fileMutex);
   }
-}
-
-void* saveToChatlog(void *buf) {
-  if (VERBOSE) mlog(">>> creating thread: save");
-  Pthread_detach(pthread_self());
-  P(&fileMutex);
-  FILE * fp;
-  fp = fopen(chatlogName, "ab+");
-  fprintf(fp, "%s", buf);
-  fclose(fp);
-  V(&fileMutex);
-  if (VERBOSE) mlog("<<< exiting thread: save");
-  return NULL; //auto reap
 }
 
 void printRecentMessages() {
