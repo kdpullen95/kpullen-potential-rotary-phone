@@ -264,8 +264,8 @@ void* handleSconn(void* tempc) {
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) slog(buf);
     if (startsWith(buf, "MSG{")) {
-      sendMessageOn(t);
-      addToMessages(t);
+      sendMessageOn(buf);
+      addToMessages(buf);
     } else
     if (startsWith(buf, "SYNCREQ{")) {
 
