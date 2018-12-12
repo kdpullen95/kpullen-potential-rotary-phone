@@ -32,6 +32,7 @@ int startsWith(char *buf, char *str);
 void addToMessages(char* buf);
 
 //HOST ONLY --------------------------------------------------------------------
+void slog(char* str);
 void hostCycle();
 void* ping();
 int loadHistory(char* fileName);
@@ -152,11 +153,14 @@ void sendMessage(char* buf) {
 
 void printRecentMessages() {
   P(&arrayMutex);
+  char t[MAXLINE];
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
-    mprint(recentMessages[i]);
+    sprintf(t, "%s", recentMessages[i] + 4);
+    mprint(t);
   }
   for (int i = 0; i < newestMessage + 1; i++) {
-    mprint(recentMessages[i]);
+    sprintf(t, "%s", recentMessages[i] + 4);
+    mprint(t);
   }
   V(&arrayMutex);
 }
@@ -184,6 +188,7 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
 }
 
 void mlog(char* str) {
+  str[strcspn(str, "\n")] = 0;
   printf("|||||||||||||||||| %s\n", str);
 }
 
@@ -193,6 +198,11 @@ void mprint(char* str) {
 
 
 //HOST ONLY --------------------------------------------------------------------
+
+void slog(char* str) {
+  str[strcspn(str, "\n")] = 0;
+  printf("|||||||||||||||||| S: %s\n", str);
+}
 
 void sendMessageOn(char* buf) {
   for (int i = 0; i < 100; i++) {
@@ -223,13 +233,13 @@ void hostCycle() {
   struct sockaddr_storage clientaddr;
 
   listenfd = Open_listenfd(host.port);
-  if (VERBOSE) mlog("starting server");
+  if (VERBOSE) slog("starting server");
 
   while (1) {
     clientlen = sizeof(clientaddr);
     struct connT connect;
     connect.connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
-    if (VERBOSE) mlog("connection attempted");
+    if (VERBOSE) slog("connection attempted");
     connect.EXISTS = 1;
     P(&connMutex);
     if (lastConn == MAXCONN - 1) { lastConn = 0; } else { lastConn++; }
@@ -243,7 +253,7 @@ void hostCycle() {
 }
 
 void* handleSconn(void* tempc) {
-  if (VERBOSE) mlog(">>> creating thread: sconn");
+  if (VERBOSE) slog(">>> creating thread: sconn");
   Pthread_detach(pthread_self());
   int i = *((int *) tempc);
   char buf[MAXLINE];
@@ -252,11 +262,9 @@ void* handleSconn(void* tempc) {
 
   Rio_readinitb(&rio, connections[i].connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
-    if (VERBOSE) mlog(buf);
+    if (VERBOSE) slog(buf);
     if (startsWith(buf, "MSG{")) {
-      char t[MAXLINE];
       sendMessageOn(t);
-      sprintf(t, "%s", buf + 4);
       addToMessages(t);
     } else
     if (startsWith(buf, "SYNCREQ{")) {
@@ -271,6 +279,6 @@ void* handleSconn(void* tempc) {
   connections[i].EXISTS = 0;
   V(&connMutex);
 
-  if (VERBOSE) mlog("<<< exiting thread: sconn");
+  if (VERBOSE) slog("<<< exiting thread: sconn");
   return NULL; //auto reap
 }
