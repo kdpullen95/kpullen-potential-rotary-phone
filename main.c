@@ -35,10 +35,9 @@ void sshutdown();
 
 //HOST ONLY --------------------------------------------------------------------
 void slog(char* str);
-void loadChatlog();
+void loadChatlog(char* fileName);
 void hostCycle();
 void* ping();
-int loadHistory(char* fileName);
 void sendMessageOn(char* buf, int connfd);
 void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
@@ -64,7 +63,6 @@ struct connT host;
 struct connT self;
 
 int serverProc = -1;
-int filenameIndex = -1;
 char chatlogName[CONTENTLEN];
 char *pingString = "PING\n";
 
@@ -74,6 +72,7 @@ int main(int argc, char **argv)
   Sem_init(&arrayMutex, 0, 1);
   Sem_init(&connMutex, 0, 1);
 
+  int index;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       HEADLESS = 0;
@@ -93,7 +92,7 @@ int main(int argc, char **argv)
       i++;
       mlog("will attempt to load chatlogs from file");
       mlog(argv[i+1]);
-      filenameIndex = i + 1;
+      index = i + 1;
     }
   }
 
@@ -106,7 +105,7 @@ int main(int argc, char **argv)
     fgets(host.port, PORTLEN, stdin); getchar();
     strcpy(host.ip, "127.0.0.1");
     if ((serverProc = Fork()) == 0) {
-      if (LOAD) loadChatlog();
+      if (LOAD) loadChatlog(argv[index]);
       hostCycle();
     }
   } else {
@@ -323,6 +322,6 @@ void* handleSconn(void* tempc) {
   return NULL; //auto reap
 }
 
-void loadChatlog() {
-  argv[filenameIndex];
+void loadChatlog(char* fileName) {
+  slog(fileName);
 }
