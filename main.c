@@ -35,6 +35,7 @@ void sshutdown();
 
 //HOST ONLY --------------------------------------------------------------------
 void slog(char* str);
+void loadChatlog();
 void hostCycle();
 void* ping();
 int loadHistory(char* fileName);
@@ -43,6 +44,7 @@ void* handleSconn(void* tempc);
 void* saveToChatlog(void* message);
 
 
+//command line options!
 int VERBOSE = 0, HEADLESS = 1, SAVE = 0, LOAD = 0, HOST = 0;
 //I know all caps for variables defies
                   // convention, but it makes my code easier to visually parse
@@ -53,7 +55,7 @@ sem_t arrayMutex; //message array sync
 sem_t connMutex; //connection array sync
 
 char recentMessages[MAXHISTORY][MAXLINE]; //TODO: replace with linked list
-int newestMessage = 0;
+int newestMessage = 0;                        //with numerical insert sort
 struct connT connections[MAXCONN]; //TODO: linked list
 int lastConn = 0;
 
@@ -62,6 +64,7 @@ struct connT host;
 struct connT self;
 
 int serverProc = -1;
+int filenameIndex = -1;
 char chatlogName[CONTENTLEN];
 char *pingString = "PING\n";
 
@@ -90,6 +93,7 @@ int main(int argc, char **argv)
       i++;
       mlog("will attempt to load chatlogs from file");
       mlog(argv[i+1]);
+      filenameIndex = i + 1;
     }
   }
 
@@ -102,6 +106,7 @@ int main(int argc, char **argv)
     fgets(host.port, PORTLEN, stdin); getchar();
     strcpy(host.ip, "127.0.0.1");
     if ((serverProc = Fork()) == 0) {
+      if (LOAD) loadChatlog();
       hostCycle();
     }
   } else {
@@ -154,6 +159,7 @@ void* clientCycle() {
   Pthread_detach(pthread_self());
   if (VERBOSE) mlog("<<< entering client thread");
   rio_t rio; char buf[MAXLINE];
+  Rio_writen(host.connfd, "SYNCREQ{", MAXLINE);
   Rio_readinitb(&rio, host.connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
@@ -175,7 +181,7 @@ void sendMessage(char* buf) {
 
 void printRecentMessages() {
   P(&arrayMutex);
-  mprint("-\n\n\n\n\n\n-\n");
+  mprint("-\n\n\n\n\n\n\n\n");
   char t[MAXLINE];
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     sprintf(t, "%s", recentMessages[i] + 4);
@@ -249,6 +255,9 @@ void* ping() {
 }
 
 void hostCycle() {
+  if (LOAD) {
+
+  }
   pthread_t pingThread;
   Pthread_create(&pingThread, NULL, ping, NULL);
   int listenfd;
@@ -292,7 +301,14 @@ void* handleSconn(void* tempc) {
       addToMessages(buf);
     } else
     if (startsWith(buf, "SYNCREQ{")) {
-
+      P(&arrayMutex);
+      for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
+        Rio_writen(connections[i].connfd, recentMessages[i], strlen(recentMessages[i]));
+      }
+      for (int i = 0; i < newestMessage + 1; i++) {
+        Rio_writen(connections[i].connfd, recentMessages[i], strlen(recentMessages[i]));
+      }
+      V(&arrayMutex);
     } else
     if (startsWith(buf, "ENDSESS{")) {
       break;
@@ -305,4 +321,8 @@ void* handleSconn(void* tempc) {
 
   if (VERBOSE) slog("<<< exiting thread: sconn");
   return NULL; //auto reap
+}
+
+void loadChatlog() {
+  argv[filenameIndex];
 }
