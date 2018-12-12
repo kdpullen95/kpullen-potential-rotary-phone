@@ -2,6 +2,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "csapp.h"
 //
 #define USERNAMELEN 32
@@ -10,7 +11,7 @@
 #define IPLEN 20
 #define PORTLEN 5
 #define MAXCONN 15
-#define MAXHISTORY 5
+#define MAXHISTORY 40
 
 struct connT {
   char username[USERNAMELEN];
@@ -59,6 +60,7 @@ int lastConn = 0;
 struct connT host;
 struct connT self;
 
+int serverProc = -1;
 char chatlogName[CONTENTLEN];
 char *pingString = "PING\n";
 
@@ -90,13 +92,15 @@ int main(int argc, char **argv)
     }
   }
 
+  signal(SIGINT, shutdown);
+
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
     HOST = 1;
     if (VERBOSE) mlog("starting as host");
     mprint("Enter Desired Port Number: \n");
     fgets(host.port, PORTLEN, stdin); getchar();
     strcpy(host.ip, "127.0.0.1");
-    if (Fork() == 0) {
+    if ((serverProc = Fork()) == 0) {
       hostCycle();
     }
   } else {
@@ -121,6 +125,13 @@ int main(int argc, char **argv)
 
   char buf[CONTENTLEN];
   while(1) {
+    if (startsWith(buf, "/exit")) {
+      raise(SIGINT);
+      break;
+    }
+    if (startsWith(buf, "/chnUsern")) {
+      continue;
+    }
     fgets(buf, CONTENTLEN, stdin);
     if (VERBOSE) { mlog("sending on message"); mlog(buf); }
     char m[MAXLINE];
@@ -129,6 +140,14 @@ int main(int argc, char **argv)
     addToMessages(m);
     printRecentMessages();
   }
+}
+
+void shutdown() {
+  if (serverProc > 0) {
+    kill(serverProc, SIGINT);
+  }
+  mlog("recieved and exiting (remove in 3s)");
+  exit();
 }
 
 void* clientCycle() {
@@ -156,6 +175,7 @@ void sendMessage(char* buf) {
 
 void printRecentMessages() {
   P(&arrayMutex);
+  mprint("-\n\n\n\n\n\n-");
   char t[MAXLINE];
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     sprintf(t, "%s", recentMessages[i] + 4);
@@ -191,7 +211,8 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
 }
 
 void mlog(char* str) {
-  //str[strcspn(str, "\n")] = 0; seg fault whyyyyyyyyyyyyy
+  //str[strcspn(str, "\n")] = 0; // seg fault whyyyyyyyyyyyyy
+            //this method was supposedly seg safe. supposedly. lies & slander.
   printf("|||||||||||||||||| %s\n", str);
 }
 
