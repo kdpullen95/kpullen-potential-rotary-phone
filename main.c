@@ -179,8 +179,8 @@ void* handleSconn(void* tempc) {
     if (VERBOSE) mlog(buf);
     if (startsWith(buf, "MSG{")) {
       char t[MAXLINE];
-      sprintf(t, "%s", buf + 4);
       sendMessage(t);
+      sprintf(t, "%s", buf + 4);
       addToMessages(t);
     } else
     if (startsWith(buf, "SYNCREQ{")) {
