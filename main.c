@@ -10,7 +10,7 @@
 #define IPLEN 20
 #define PORTLEN 5
 #define MAXCONN 15
-#define MAXHISTORY 40
+#define MAXHISTORY 5
 
 struct connT {
   char username[USERNAMELEN];
@@ -172,7 +172,7 @@ void printRecentMessages() {
 
 void addToMessages(char* buf) {
   P(&arrayMutex);
-  newestMessage++;
+  if (newestMessage == MAXHISTORY - 1) { newestMessage = 0; } else { newestMessage++; }
   strcpy(recentMessages[newestMessage], buf);
   V(&arrayMutex);
   if (SAVE) {
