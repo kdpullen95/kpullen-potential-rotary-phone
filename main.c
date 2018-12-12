@@ -44,18 +44,21 @@ void* saveToChatlog(void* message);
 int VERBOSE = 0, HEADLESS = 1, SAVE = 0, LOAD = 0, HOST = 0;
 //I know all caps for variables defies
                   // convention, but it makes my code easier to visually parse
-sem_t fileMutex;
-sem_t arrayMutex;
-sem_t connMutex;
+
+//MUTEXES
+sem_t fileMutex; //file sync
+sem_t arrayMutex; //message array sync
+sem_t connMutex; //connection array sync
 
 char recentMessages[MAXHISTORY][MAXLINE]; //TODO: replace with linked list
 int newestMessage = 0;
 struct connT connections[MAXCONN]; //TODO: linked list
 int lastConn = 0;
 
+//important individuals
 struct connT host;
 struct connT self;
-pthread_t keyThread;
+
 char chatlogName[CONTENTLEN];
 char *pingString = "PING\n";
 
@@ -188,7 +191,7 @@ int startsWith(char *buf, char *str) { //TODO: actual starts with
 }
 
 void mlog(char* str) {
-  str[strcspn(str, "\n")] = 0;
+  //str[strcspn(str, "\n")] = 0; seg fault whyyyyyyyyyyyyy
   printf("|||||||||||||||||| %s\n", str);
 }
 
@@ -200,7 +203,7 @@ void mprint(char* str) {
 //HOST ONLY --------------------------------------------------------------------
 
 void slog(char* str) {
-  str[strcspn(str, "\n")] = 0;
+  //str[strcspn(str, "\n")] = 0;
   printf("|||||||||||||||||| S: %s\n", str);
 }
 
