@@ -158,8 +158,8 @@ void* clientCycle() {
   Pthread_detach(pthread_self());
   if (VERBOSE) mlog("<<< entering client thread");
   rio_t rio; char buf[MAXLINE];
-  Rio_writen(host.connfd, "SYNCREQ{\n", MAXLINE);
-  Rio_writen(host.connfd, "MSG{{A NEW CHALLENGER HAS ARRIVED}\n", MAXLINE);
+  Rio_writen(host.connfd, "SYNCREQ{\n\n", MAXLINE);
+  Rio_writen(host.connfd, "MSG{{A NEW CHALLENGER HAS ARRIVED}\n\n", MAXLINE);
   Rio_readinitb(&rio, host.connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
@@ -244,7 +244,7 @@ void sendMessageOn(char* buf, int connfd) {
 
 void* ping() {
   while(1) {
-    Sleep(10);
+    Sleep(20);
     for (int i = 0; i < MAXCONN; i++) {
       if (connections[i].EXISTS == 1) {
         Rio_writen(connections[i].connfd, pingString, strlen(pingString));

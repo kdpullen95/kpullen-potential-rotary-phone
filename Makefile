@@ -14,4 +14,4 @@ main: main.o csapp.o
 	$(CC) $(CFLAGS) main.o csapp.o -o main $(LDFLAGS)
 
 clean:
-	rm -f *~ *.o main
+	rm -f *~ *.o main log-*
