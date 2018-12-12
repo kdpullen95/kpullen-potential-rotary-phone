@@ -31,7 +31,7 @@ void mlog(char* str);
 void mprint(char* str);
 int startsWith(char *buf, char *str);
 void addToMessages(char* buf);
-void shutdown();
+void sshutdown();
 
 //HOST ONLY --------------------------------------------------------------------
 void slog(char* str);
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     }
   }
 
-  signal(SIGINT, shutdown);
+  signal(SIGINT, sshutdown);
 
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
     HOST = 1;
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
   }
 }
 
-void shutdown() {
+void sshutdown() {
   if (serverProc > 0) {
     kill(serverProc, SIGINT);
   }
