@@ -31,6 +31,7 @@ void mlog(char* str);
 void mprint(char* str);
 int startsWith(char *buf, char *str);
 void addToMessages(char* buf);
+void shutdown();
 
 //HOST ONLY --------------------------------------------------------------------
 void slog(char* str);
@@ -147,7 +148,7 @@ void shutdown() {
     kill(serverProc, SIGINT);
   }
   mlog("recieved and exiting (remove in 3s)");
-  exit();
+  exit(0);
 }
 
 void* clientCycle() {
