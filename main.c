@@ -222,7 +222,7 @@ void hostCycle() {
   pthread_t sconnThread;
   struct sockaddr_storage clientaddr;
 
-  listenfd = Open_listenfd(self.port);
+  listenfd = Open_listenfd(host.port);
   if (VERBOSE) mlog("starting server");
 
   while (1) {
