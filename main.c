@@ -7,7 +7,7 @@
 #define USERNAMELEN 32
 #define CONTENTLEN 2048
 #define TIMELEN 32
-#define IPLEN 14
+#define IPLEN 20
 #define PORTLEN 5
 #define MAXCONN 15
 #define MAXHISTORY 40
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     if (VERBOSE) mlog("starting as host");
     mprint("Enter Desired Port Number: \n");
     fgets(host.port, PORTLEN, stdin); getchar();
-    host.ip = "127.0.0.1";
+    strcpy(host.ip, "127.0.0.1");
     if (Fork() == 0) {
       hostCycle();
     }
