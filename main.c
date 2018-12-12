@@ -17,7 +17,6 @@ struct connT {
   char ip[IPLEN];
   char port[PORTLEN];
   int connfd;
-  sem_t mutex;
   int EXISTS;
 };
 
@@ -36,16 +35,18 @@ int loadHistory(char* fileName);
 int startsWith(char *buf, char *str);
 
 
-int VERBOSE = 0, HEADLESS = 0, SAVE = 0, LOAD = 0;
+int VERBOSE = 0, HEADLESS = 1, SAVE = 0, LOAD = 0, HOST = 0;
 //I know all caps for variables defies
                   // convention, but it makes my code easier to visually parse
 sem_t fileMutex;
 sem_t arrayMutex;
 sem_t connMutex;
+
 char recentMessages[MAXHISTORY][MAXLINE]; //TODO: replace with linked list
 int newestMessage = 0;
 struct connT connections[MAXCONN]; //TODO: linked list
 int lastConn = 0;
+
 struct connT host;
 struct connT self;
 pthread_t keyThread;
@@ -60,8 +61,8 @@ int main(int argc, char **argv)
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      HEADLESS = 1;
-      mlog("headless");
+      HEADLESS = 0;
+      mlog("not headless (not implemented)");
     } else
     if (strcmp(argv[i], "-v") == 0) {
       VERBOSE = 1;
@@ -80,38 +81,34 @@ int main(int argc, char **argv)
     }
   }
 
-  pthread_t cycleThread;
-
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
+    HOST = 1;
     if (VERBOSE) mlog("starting as host");
-    /*data gathering*/
     mprint("Enter Desired Port Number: \n");
-    fgets(self.port, PORTLEN, stdin); getchar();
-    mprint("Enter Username: \n");
-    fgets(self.username, USERNAMELEN, stdin);
-    self.username[strcspn(self.username, "\n")] = 0;
-    /*end data gathering*/
-    Pthread_create(&cycleThread, NULL, hostCycle, NULL);
-    pthread_t pingThread;
-    Pthread_create(&pingThread, NULL, ping, NULL);
+    fgets(host.port, PORTLEN, stdin); getchar();
+    host.ip = "127.0.0.1";
+    if (Fork() == 0) {
+      hostCycle();
+    }
   } else {
     if (VERBOSE) mlog ("starting as client");
-    /*data-gathering*/
-    mprint("Enter IP of Host (format ##.###.###.###): ");
+    mprint("Enter IP of Host (format ###.###.###.###): ");
     fgets(host.ip, IPLEN, stdin); getchar();
     mprint("Enter Port of Host: ");
     fgets(host.port, PORTLEN, stdin); getchar();
-    mprint("Enter Username: ");
-    fgets(self.username, USERNAMELEN, stdin);
-    self.username[strcspn(self.username, "\n")] = 0;
-    /*end data gathering*/
-    host.connfd = Open_clientfd(host.ip, host.port);
-    host.EXISTS = 1;
-    Sem_init(&host.mutex, 0, 1);
-    connections[0] = host;
-    Pthread_create(&cycleThread, NULL, clientCycle, NULL);
   }
 
+  SAVE = 0; //we only need save for the server
+
+  pthread_t cycleThread;
+  mprint("Enter Username: ");
+  fgets(self.username, USERNAMELEN, stdin);
+  self.username[strcspn(self.username, "\n")] = 0;
+
+  host.connfd = Open_clientfd(host.ip, host.port);
+  host.EXISTS = 1;
+  connections[0] = host;
+  Pthread_create(&cycleThread, NULL, clientCycle, NULL);
 
   char buf[CONTENTLEN];
   while(1) {
@@ -121,6 +118,7 @@ int main(int argc, char **argv)
     sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
     sendMessage(m);
     addToMessages(m);
+    printRecentMessages();
   }
 }
 
@@ -136,9 +134,9 @@ void* ping() {
   return NULL;
 }
 
-void* hostCycle() {
-  Pthread_detach(pthread_self());
-  if (VERBOSE) mlog("<<< entering host thread");
+void hostCycle() {
+  pthread_t pingThread;
+  Pthread_create(&pingThread, NULL, ping, NULL);
   int listenfd;
   socklen_t clientlen;
   pthread_t sconnThread;
@@ -162,8 +160,6 @@ void* hostCycle() {
     Pthread_create(&sconnThread, NULL, handleSconn, i);
       /*accept incoming connections*/
   }
-
-  return NULL;
 }
 
 void* handleSconn(void* tempc) {
@@ -190,6 +186,7 @@ void* handleSconn(void* tempc) {
       break;
     }
   }
+
   P(&connMutex);
   connections[i].EXISTS = 0;
   V(&connMutex);
@@ -211,12 +208,13 @@ void* clientCycle() {
     if (VERBOSE) mlog(buf);
     if (startsWith(buf, "MSG{")) {
       addToMessages(buf);
+      printRecentMessages();
     }
   }
   return NULL;
 }
 
-void sendMessage(char* buf) {
+void sendMessagesOn(char* buf) {
   for (int i = 0; i < 100; i++) {
     if (connections[i].EXISTS == 1) {
       Rio_writen(connections[i].connfd, buf, strlen(buf));
@@ -224,11 +222,18 @@ void sendMessage(char* buf) {
   }
 }
 
+void sendMessage(char* buf) {
+  if (host.EXISTS) {
+    Rio_writen(host.connfd, buf, strlen(buf));
+  } else {
+    //add to backlog, sync request
+  }
+}
+
 void addToMessages(char* buf) {
   P(&arrayMutex);
   newestMessage++;
   strcpy(recentMessages[newestMessage], buf);
-  printRecentMessages();
   V(&arrayMutex);
   if (SAVE) {
     if (VERBOSE) mlog("saving to chatlog");
@@ -242,12 +247,14 @@ void addToMessages(char* buf) {
 }
 
 void printRecentMessages() {
+  P(&arrayMutex);
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     mprint(recentMessages[i]);
   }
   for (int i = 0; i < newestMessage + 1; i++) {
     mprint(recentMessages[i]);
   }
+  V(&arrayMutex);
 }
 
 void mlog(char* str) {
