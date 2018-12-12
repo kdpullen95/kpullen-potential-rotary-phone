@@ -128,18 +128,18 @@ int main(int argc, char **argv)
   while(1) {
     if (startsWith(buf, "/exit")) {
       raise(SIGINT);
-      break;
-    }
+    } else
     if (startsWith(buf, "/chnUsern")) {
       continue;
+    } else {
+      fgets(buf, CONTENTLEN, stdin);
+      if (VERBOSE) { mlog("sending on message"); mlog(buf); }
+      char m[MAXLINE];
+      sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
+      sendMessage(m);
+      addToMessages(m);
+      printRecentMessages();
     }
-    fgets(buf, CONTENTLEN, stdin);
-    if (VERBOSE) { mlog("sending on message"); mlog(buf); }
-    char m[MAXLINE];
-    sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
-    sendMessage(m);
-    addToMessages(m);
-    printRecentMessages();
   }
 }
 
@@ -147,7 +147,6 @@ void sshutdown() {
   if (serverProc > 0) {
     kill(serverProc, SIGINT);
   }
-  mlog("recieved and exiting (remove in 3s)");
   exit(0);
 }
 
@@ -176,7 +175,7 @@ void sendMessage(char* buf) {
 
 void printRecentMessages() {
   P(&arrayMutex);
-  mprint("-\n\n\n\n\n\n-");
+  mprint("-\n\n\n\n\n\n-\n");
   char t[MAXLINE];
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     sprintf(t, "%s", recentMessages[i] + 4);
