@@ -301,11 +301,11 @@ void* handleSconn(void* tempc) {
     } else
     if (startsWith(buf, "SYNCREQ{")) {
       P(&arrayMutex);
-      for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
-        Rio_writen(connections[i].connfd, recentMessages[i], strlen(recentMessages[i]));
+      for (int x = newestMessage + 1; x < MAXHISTORY; x++) {
+        Rio_writen(connections[i].connfd, recentMessages[x], strlen(recentMessages[x]));
       }
-      for (int i = 0; i < newestMessage + 1; i++) {
-        Rio_writen(connections[i].connfd, recentMessages[i], strlen(recentMessages[i]));
+      for (int x = 0; x < newestMessage + 1; x++) {
+        Rio_writen(connections[i].connfd, recentMessages[x], strlen(recentMessages[x]));
       }
       V(&arrayMutex);
     } else
