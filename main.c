@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 #include "csapp.h"
 
 #define USERNAMELEN 32
@@ -22,6 +23,7 @@ struct connT {
 
 void* clientCycle();
 void* hostCycle();
+void* ping();
 void setupConnection(char* buf, int connfd);
 void mlog(char* str);
 void mprint(char* str);
@@ -47,6 +49,8 @@ int lastConn = 0;
 struct connT host;
 struct connT self;
 pthread_t keyThread;
+char chatlogName[CONTENTLEN];
+char pingString = "PING";
 
 int main(int argc, char **argv)
 {
@@ -65,6 +69,7 @@ int main(int argc, char **argv)
     } else
     if (strcmp(argv[i], "-s") == 0) {
       SAVE = 1;
+      sprintf(chatlogName, "log-%d", (int)time(NULL));
       mlog("saving chatlogs");
     } else
     if (strcmp(argv[i], "-l") == 0) {
@@ -83,9 +88,12 @@ int main(int argc, char **argv)
     mprint("Enter Desired Port Number: \n");
     fgets(self.port, PORTLEN, stdin); getchar();
     mprint("Enter Username: \n");
-    fgets(self.username, USERNAMELEN, stdin); getchar();
+    fgets(self.username, USERNAMELEN, stdin);
+    self.username[strcspn(self.username, "\n")] = 0;
     /*end data gathering*/
     Pthread_create(&cycleThread, NULL, hostCycle, NULL);
+    pthread_t pingThread;
+    Pthread_create(&pingThread, NULL, ping, NULL);
   } else {
     if (VERBOSE) mlog ("starting as client");
     /*data-gathering*/
@@ -94,7 +102,8 @@ int main(int argc, char **argv)
     mprint("Enter Port of Host: ");
     fgets(host.port, PORTLEN, stdin); getchar();
     mprint("Enter Username: ");
-    fgets(self.username, USERNAMELEN, stdin); getchar();
+    fgets(self.username, USERNAMELEN, stdin);
+    self.username[strcspn(self.username, "\n")] = 0;
     /*end data gathering*/
     host.connfd = Open_clientfd(host.ip, host.port);
     host.EXISTS = 1;
@@ -102,6 +111,7 @@ int main(int argc, char **argv)
     connections[0] = host;
     Pthread_create(&cycleThread, NULL, clientCycle, NULL);
   }
+
 
   char buf[CONTENTLEN];
   while(1) {
@@ -112,6 +122,16 @@ int main(int argc, char **argv)
     sendMessage(m);
     addToMessages(m);
   }
+}
+
+void* ping() {
+  Sleep(5);
+  for (int i = 0; i < MAXCONN; i++) {
+    if (connections[i].EXISTS == 1) {
+      Rio_writen(connections[i].connfd, pingString, strlen(pingString));
+    }
+  }
+
 }
 
 void* hostCycle() {
@@ -187,7 +207,9 @@ void* clientCycle() {
   Rio_readinitb(&rio, host.connfd);
   while(Rio_readlineb(&rio, buf, MAXLINE) != 0) {
     if (VERBOSE) mlog(buf);
-    addToMessages(buf);
+    if (startsWith(buf, "MSG{")) {
+      addToMessages(buf);
+    }
   }
   return NULL;
 }
@@ -216,7 +238,10 @@ void* saveToChatlog(void *buf) {
   if (VERBOSE) mlog(">>> creating thread: save");
   Pthread_detach(pthread_self());
   P(&fileMutex);
-  //save
+  FILE * fp;
+  fp = fopen(chatlogName, "ab+");
+  fprintf(fp, "%s", buf);
+  fclose(fp);
   V(&fileMutex);
   if (VERBOSE) mlog("<<< exiting thread: save");
   return NULL; //auto reap
