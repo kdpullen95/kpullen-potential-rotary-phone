@@ -18,7 +18,7 @@ struct connT {
   char ip[IPLEN];
   char port[PORTLEN];
   int connfd;
-  int EXISTS;
+  int EXISTS; //NULL check
 };
 
 //CLIENT ONLY ------------------------------------------------------------------
@@ -49,30 +49,33 @@ int VERBOSE = 0, HEADLESS = 1, SAVE = 0, LOAD = 0, HOST = 0;
                   // convention, but it makes my code easier to visually parse
 
 //MUTEXES
-sem_t fileMutex; //file sync
-sem_t arrayMutex; //message array sync
-sem_t connMutex; //connection array sync
+sem_t fileMutex;                          //file sync
+sem_t arrayMutex;                         //message array sync
+sem_t connMutex;                          //connection array sync
 
 char recentMessages[MAXHISTORY][MAXLINE]; //TODO: replace with linked list
 int newestMessage = 0;                        //with numerical insert sort
-struct connT connections[MAXCONN]; //TODO: linked list
+struct connT connections[MAXCONN];        //TODO: linked list
 int lastConn = 0;
 
 //important individuals
 struct connT host;
 struct connT self;
 
-int serverProc = -1;
-char chatlogName[CONTENTLEN];
-char *pingString = "PING\n";
+//other variables
+int serverProc = -1;                       //server process ID
+char chatlogName[CONTENTLEN];              //chatlog file name (for saving)
+char *pingString = "PING\n";               //PING
 
 int main(int argc, char **argv)
 {
+  //initialize semaphores
   Sem_init(&fileMutex, 0, 1);
   Sem_init(&arrayMutex, 0, 1);
   Sem_init(&connMutex, 0, 1);
 
-  int index;
+  int index; //temp variable
+  //read arguments and set variables
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       HEADLESS = 0;
@@ -84,19 +87,19 @@ int main(int argc, char **argv)
     } else
     if (strcmp(argv[i], "-s") == 0) {
       SAVE = 1;
-      sprintf(chatlogName, "log-%d", (int)time(NULL));
-      mlog("saving chatlogs");
+      sprintf(chatlogName, "log-%d", (int)time(NULL)); //set chatlog file name
+      mlog("saving chatlogs");                         //using time as unique
     } else
     if (strcmp(argv[i], "-l") == 0) {
       LOAD = 1;
-      i++;
+      i++; //skip filename
       mlog("will attempt to load chatlogs from file");
       mlog(argv[i+1]);
-      index = i + 1;
+      index = i + 1; //saves argv index of the loading file name
     }
   }
 
-  signal(SIGINT, sshutdown);
+  signal(SIGINT, sshutdown); //sets SIGINT to call sshutdown()
 
   if (argc > 1 && strcmp(argv[1], "-host") == 0) {
     HOST = 1;
@@ -104,7 +107,7 @@ int main(int argc, char **argv)
     mprint("Enter Desired Port Number: \n");
     fgets(host.port, PORTLEN, stdin); getchar();
     strcpy(host.ip, "127.0.0.1");
-    if ((serverProc = Fork()) == 0) {
+    if ((serverProc = Fork()) == 0) { //if child process
       if (LOAD) loadChatlog(argv[index]);
       hostCycle();
     }
@@ -121,11 +124,10 @@ int main(int argc, char **argv)
   pthread_t cycleThread;
   mprint("Enter Username: ");
   fgets(self.username, USERNAMELEN, stdin);
-  self.username[strcspn(self.username, "\n")] = 0;
+  self.username[strcspn(self.username, "\n")] = 0; //strips newline off
 
   host.connfd = Open_clientfd(host.ip, host.port);
   host.EXISTS = 1;
-  connections[0] = host;
   Pthread_create(&cycleThread, NULL, clientCycle, NULL);
 
   char buf[CONTENTLEN];
@@ -181,7 +183,7 @@ void sendMessage(char* buf) {
 
 void printRecentMessages() {
   P(&arrayMutex);
-  mprint("-\n\n\n\n\n\n\n\n");
+  mprint("-\n\n\n\n\n\n\n-\n");
   char t[MAXLINE];
   for (int i = newestMessage + 1; i < MAXHISTORY; i++) {
     sprintf(t, "%s", recentMessages[i] + 4);
