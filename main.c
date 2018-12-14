@@ -147,7 +147,7 @@ int main(int argc, char **argv)
       printRecentMessages();
     }
   }
-}159
+}
 
 void sshutdown() {
   if (serverProc > 0) {
