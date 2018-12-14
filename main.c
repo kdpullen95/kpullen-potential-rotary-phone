@@ -132,13 +132,13 @@ int main(int argc, char **argv)
 
   char buf[CONTENTLEN];
   while(1) {
+    fgets(buf, CONTENTLEN, stdin);
     if (startsWith(buf, "/exit")) {
       raise(SIGINT);
     } else
     if (startsWith(buf, "/chnUsern")) {
       continue;
     } else {
-      fgets(buf, CONTENTLEN, stdin);
       if (VERBOSE) { mlog("sending on message"); mlog(buf); }
       char m[MAXLINE];
       sprintf(m, "MSG{[%d] %s: %s", (int)time(NULL), self.username, buf);
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
       printRecentMessages();
     }
   }
-}
+}159
 
 void sshutdown() {
   if (serverProc > 0) {
@@ -170,15 +170,13 @@ void* clientCycle() {
       printRecentMessages();
     }
   }
+  mprint("Host disconnected. Restart to reconnect.");
+  raise(SIGINT);
   return NULL;
 }
 
 void sendMessage(char* buf) {
-  if (host.EXISTS) {
-    Rio_writen(host.connfd, buf, strlen(buf));
-  } else {
-    //add to backlog, sync request
-  }
+  Rio_writen(host.connfd, buf, strlen(buf));
 }
 
 void printRecentMessages() {
@@ -215,12 +213,12 @@ void addToMessages(char* buf) {
 }
 
 int startsWith(char *buf, char *str) { //TODO: actual starts with
-  return strstr(buf, str);
+  return strncmp(str, buf, strlen(str)) == 0;
 }
 
 void mlog(char* str) {
-  //str[strcspn(str, "\n")] = 0; // seg fault whyyyyyyyyyyyyy
-            //this method was supposedly seg safe. supposedly. lies & slander.
+
+
   printf("|||||||||||||||||| %s\n", str);
 }
 
@@ -237,7 +235,7 @@ void slog(char* str) {
 }
 
 void sendMessageOn(char* buf, int connfd) {
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < MAXCONN; i++) {
     if (connections[i].EXISTS == 1 && connections[i].connfd != connfd) {
       Rio_writen(connections[i].connfd, buf, strlen(buf));
     }
@@ -245,6 +243,7 @@ void sendMessageOn(char* buf, int connfd) {
 }
 
 void* ping() {
+  Pthread_detach(pthread_self());
   while(1) {
     Sleep(20);
     for (int i = 0; i < MAXCONN; i++) {
@@ -257,9 +256,6 @@ void* ping() {
 }
 
 void hostCycle() {
-  if (LOAD) {
-
-  }
   pthread_t pingThread;
   Pthread_create(&pingThread, NULL, ping, NULL);
   int listenfd;
