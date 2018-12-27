@@ -1,3 +1,5 @@
+|| You shouldn't be compiling this.
+
 CC = gcc
 CFLAGS = -g -Wall
 LDFLAGS = -lpthread
