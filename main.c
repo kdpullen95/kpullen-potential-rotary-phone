@@ -1,3 +1,5 @@
+//author: github.com/kdpullen95
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
